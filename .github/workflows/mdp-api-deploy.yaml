@@ -1,0 +1,95 @@
+name: MDP Lambda Deploy Worklfow
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - release/1.0.0
+    paths-ignore:
+      - 'devops/datadog/**'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  id-token: write
+  contents: read
+  checks: read
+  statuses: write
+
+env:
+  S3_BUCKET: sdp-devops
+  S3_UPLOAD_PATH: lambda/${{ github.ref_name == 'release/1.0.0' && 'release' || github.ref_name }}
+  STACK_NAME: mdpapi
+
+
+jobs:
+
+  build:
+    name: Lambda Deploy
+    runs-on: ubuntu-latest
+    outputs:
+      docker-tag: ${{ env.IMAGE_TAG }}
+      workweek: ${{ steps.workweek.outputs.formattedTime }}
+    # strategy:
+    #   matrix:
+    #     node-version: [14.x, 16.x, 18.x, 20.x]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Get Short SHA
+        id: sha
+        run: |
+          echo "IMAGE_TAG=$(echo $GITHUB_SHA | cut -c 1-8)" >> $GITHUB_ENV
+          echo $S3_BUCKET $S3_UPLOAD_PATH
+      
+      - name: Slack Notification for Start
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_CHANNEL: general
+          SLACK_COLOR: '#2E3B8B'
+          SLACK_ICON: https://github.com/rtCamp.png?size=48
+          SLACK_MESSAGE: "Job: '${{github.job}}', VERSION: 'commit-${{env.IMAGE_TAG}}-build-${{github.run_id}}-${{github.run_number}}'"
+          SLACK_TITLE: Started
+          SLACK_USERNAME: Github Actions
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Setup Node Environment
+        uses: actions/setup-node@v3
+
+      - name: NPM Install
+        run: |
+          # echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
+          # npm install
+          npm --version
+
+      - name: NPM Lint & Build
+        run: |
+          # ./build/configs/generate-config.sh ${stackName} > config.json
+          # cat config.json
+          # BUILD_TAG=`echo "$BUILD_TAG" | sed 's/%2F1.0.0//'` CONFIG=config.json npm run build
+          npm --version
+
+      # - name: Upload Artifacts to S3 Bucket
+      #   uses: shallwefootball/s3-upload-action@master
+      #   with:
+      #     aws_key_id: ${{ secrets.AWS_KEY_ID }}
+      #     aws_secret_access_key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
+      #     aws_bucket: ${{ secrets.AWS_BUCKET }}
+      #     destination_dir: ${{env.S3_UPLOAD_PATH}}
+      #     source_dir: 'dist'
+
+      - name: Slack Notification for Success/Failure
+        uses: rtCamp/action-slack-notify@v2
+        if: success() || failure()
+        env:
+          SLACK_CHANNEL: general
+          SLACK_COLOR: ${{ job.status }} # or a specific color like 'good' or '#ff00ff'
+          SLACK_ICON: https://github.com/rtCamp.png?size=48
+          SLACK_MESSAGE: "Job: '${{github.job}}', VERSION: 'commit-${{env.IMAGE_TAG}}-build-${{github.run_id}}-${{github.run_number}}'"
+          SLACK_TITLE: ${{ job.status }}
+          SLACK_USERNAME: Github Actions
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
