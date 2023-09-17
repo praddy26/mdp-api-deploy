@@ -46,7 +46,7 @@ jobs:
         run: |
           echo "COMMIT_SHORT_SHA=$(echo $GITHUB_SHA | cut -c 1-8)" >> $GITHUB_ENV
           echo $S3_BUCKET $S3_UPLOAD_PATH
-          echo "release/1.0.0"
+          echo "main"
       
       - name: Slack Notification for Start
         uses: rtCamp/action-slack-notify@v2
