@@ -46,11 +46,11 @@ jobs:
         run: |
           echo "COMMIT_SHORT_SHA=$(echo $GITHUB_SHA | cut -c 1-8)" >> $GITHUB_ENV
           echo $S3_BUCKET $S3_UPLOAD_PATH
-          echo ${{ github.event_name }}
+          echo "release/1.0.0"
       
       - name: Slack Notification for Start
         uses: rtCamp/action-slack-notify@v2
-        if: github.event_name == 'push'
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         env:
           SLACK_CHANNEL: general
           SLACK_COLOR: '#2E3B8B'
@@ -78,7 +78,7 @@ jobs:
 
       # - name: Upload Artifacts to S3 Bucket
       #   uses: shallwefootball/s3-upload-action@master
-      #   if: github.event_name == 'push'
+      #   if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
       #   with:
       #     aws_key_id: ${{ secrets.AWS_KEY_ID }}
       #     aws_secret_access_key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
@@ -88,7 +88,7 @@ jobs:
 
       - name: Slack Notification for Success/Failure
         uses: rtCamp/action-slack-notify@v2
-        if: github.event_name == 'push' && always()
+        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && always()
         env:
           SLACK_CHANNEL: general
           SLACK_COLOR: ${{ job.status }}
