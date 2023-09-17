@@ -28,7 +28,8 @@ permissions:
 
 env:
   S3_BUCKET: sdp-devops
-  S3_UPLOAD_PATH: lambda/${{ github.ref_name == 'release/1.0.0' && 'release' || github.ref_name }}
+  S3_CF_TEMPLATE_PATH: cf-templates/${{ github.ref_name == 'release/1.0.0' && 'release' || github.ref_name }}
+  S3_ARCHIVE_TEMPLATE_PATH: pipelines/${{ github.ref_name == 'release/1.0.0' && 'release' || github.ref_name }}
   STACK_NAME: mdpapi
   SLACK_ICON: https://images.crunchbase.com/image/upload/c_lpad,h_170,w_170,f_auto,b_white,q_auto:eco,dpr_1/v1455510953/wjkfamfxecnhwk3vs1ik.png
 
@@ -76,15 +77,36 @@ jobs:
           # BUILD_TAG=`echo "$BUILD_TAG" | sed 's/%2F1.0.0//'` CONFIG=config.json npm run build
           npm --version
 
-      # - name: Upload Artifacts to S3 Bucket
-      #   uses: shallwefootball/s3-upload-action@master
-      #   if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-      #   with:
-      #     aws_key_id: ${{ secrets.AWS_KEY_ID }}
-      #     aws_secret_access_key: ${{secrets.AWS_SECRET_ACCESS_KEY}}
-      #     aws_bucket: ${{ secrets.AWS_BUCKET }}
-      #     destination_dir: ${{env.S3_UPLOAD_PATH}}
-      #     source_dir: 'dist'
+      - name: Upload Artifacts to S3 Bucket CF path
+        uses: jakejarvis/s3-sync-action@master
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        with:
+          args: |-
+            --metadata '{"commit-id":"${{ env.COMMIT_SHORT_SHA }}","workflow-build-number":"${{ github.run_id }}-${{ github.run_number }}"}'
+            --recursive
+            --include "${{ env.STACK_NAME }}/*.*"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_S3_BUCKET: ${{ env.S3_BUCKET }}
+          AWS_REGION: 'us-west-2'
+          DEST_DIR: ${{ env.S3_CF_TEMPLATE_PATH }}
+          SOURCE_DIR: 'templates'
+
+      - name: Upload Artifacts to S3 Bucket Zip Archive path
+        uses: jakejarvis/s3-sync-action@master
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        with:
+          args: |-
+            --metadata '{"commit-id":"${{ env.COMMIT_SHORT_SHA }}","workflow-build-number":"${{ github.run_id }}-${{ github.run_number }}"}'
+            --include "${{ env.STACK_NAME }}.zip"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_S3_BUCKET: ${{ env.S3_BUCKET }}
+          AWS_REGION: 'us-west-2'
+          DEST_DIR: ${{ env.S3_CF_TEMPLATE_PATH }}
+          SOURCE_DIR: 'dist/stacks'
 
       - name: Slack Notification for Success/Failure
         uses: rtCamp/action-slack-notify@v2
@@ -98,10 +120,4 @@ jobs:
           SLACK_USERNAME: Github Actions
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
 
-      # - name: Upload Artifact
-      #   uses: actions/upload-artifact@v3
-      #   if: success()
-      #   with:
-      #     name: my-artifact
-      #     path: 'dist/stacks/*.zip'
           
