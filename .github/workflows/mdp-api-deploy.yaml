@@ -76,7 +76,7 @@ jobs:
         run: |
           ./build/configs/generate-config.sh ${{ env.STACK_NAME }} > config.json
           cat config.json
-          # BUILD_TAG=`echo "$BUILD_TAG" | sed 's/%2F1.0.0//'` CONFIG=config.json npm run build
+          BUILD_TAG=`echo "$BUILD_TAG" | sed 's/%2F1.0.0//'` CONFIG=config.json npm run build
           # npm --version
 
       # - name: Upload Artifacts to S3 Bucket CF path
