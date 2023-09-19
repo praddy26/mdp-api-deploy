@@ -63,6 +63,8 @@ jobs:
 
       - name: Setup Node Environment
         uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
 
       - name: NPM Install
         run: |
@@ -72,52 +74,50 @@ jobs:
 
       - name: NPM Lint & Build
         run: |
-          # ./build/configs/generate-config.sh ${stackName} > config.json
-          # cat config.json
+          ./build/configs/generate-config.sh ${stackName} > config.json
+          cat config.json
           # BUILD_TAG=`echo "$BUILD_TAG" | sed 's/%2F1.0.0//'` CONFIG=config.json npm run build
-          npm --version
+          # npm --version
 
-      - name: Upload Artifacts to S3 Bucket CF path
-        uses: jakejarvis/s3-sync-action@master
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        with:
-          args: |-
-            --metadata '{"commit-id":"${{ env.COMMIT_SHORT_SHA }}","workflow-build-number":"${{ github.run_id }}-${{ github.run_number }}"}'
-            --recursive
-            --include "${{ env.STACK_NAME }}/*.*"
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_S3_BUCKET: ${{ env.S3_BUCKET }}
-          AWS_REGION: 'us-west-2'
-          DEST_DIR: ${{ env.S3_CF_TEMPLATE_PATH }}
-          SOURCE_DIR: 'templates'
+      # - name: Upload Artifacts to S3 Bucket CF path
+      #   uses: jakejarvis/s3-sync-action@master
+      #   if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+      #   with:
+      #     args: |-
+      #       --metadata '{"commit-id":"${{ env.COMMIT_SHORT_SHA }}","workflow-build-number":"${{ github.run_id }}-${{ github.run_number }}"}'
+      #       --recursive
+      #       --include "${{ env.STACK_NAME }}/*.*"
+      #   env:
+      #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     AWS_S3_BUCKET: ${{ env.S3_BUCKET }}
+      #     AWS_REGION: 'us-west-2'
+      #     DEST_DIR: ${{ env.S3_CF_TEMPLATE_PATH }}
+      #     SOURCE_DIR: 'templates'
 
-      - name: Upload Artifacts to S3 Bucket Zip Archive path
-        uses: jakejarvis/s3-sync-action@master
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        with:
-          args: |-
-            --metadata '{"commit-id":"${{ env.COMMIT_SHORT_SHA }}","workflow-build-number":"${{ github.run_id }}-${{ github.run_number }}"}'
-            --include "${{ env.STACK_NAME }}.zip"
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_S3_BUCKET: ${{ env.S3_BUCKET }}
-          AWS_REGION: 'us-west-2'
-          DEST_DIR: ${{ env.S3_CF_TEMPLATE_PATH }}
-          SOURCE_DIR: 'dist/stacks'
+      # - name: Upload Artifacts to S3 Bucket Zip Archive path
+      #   uses: jakejarvis/s3-sync-action@master
+      #   if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+      #   with:
+      #     args: |-
+      #       --metadata '{"commit-id":"${{ env.COMMIT_SHORT_SHA }}","workflow-build-number":"${{ github.run_id }}-${{ github.run_number }}"}'
+      #       --include "${{ env.STACK_NAME }}.zip"
+      #   env:
+      #     AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      #     AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      #     AWS_S3_BUCKET: ${{ env.S3_BUCKET }}
+      #     AWS_REGION: 'us-west-2'
+      #     DEST_DIR: ${{ env.S3_CF_TEMPLATE_PATH }}
+      #     SOURCE_DIR: 'dist/stacks'
 
-      - name: Slack Notification for Success/Failure
-        uses: rtCamp/action-slack-notify@v2
-        if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && always()
-        env:
-          SLACK_CHANNEL: general
-          SLACK_COLOR: ${{ job.status }}
-          SLACK_ICON:  ${{ env.SLACK_ICON }}
-          SLACK_MESSAGE: "Job: '${{github.job}}', VERSION: 'commit-${{env.COMMIT_SHORT_SHA}}-build-${{github.run_id}}-${{github.run_number}}'"
-          SLACK_TITLE: ${{ job.status }}
-          SLACK_USERNAME: Github Actions
-          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
-
-          
+      # - name: Slack Notification for Success/Failure
+      #   uses: rtCamp/action-slack-notify@v2
+      #   if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && always()
+      #   env:
+      #     SLACK_CHANNEL: general
+      #     SLACK_COLOR: ${{ job.status }}
+      #     SLACK_ICON:  ${{ env.SLACK_ICON }}
+      #     SLACK_MESSAGE: "Job: '${{github.job}}', VERSION: 'commit-${{env.COMMIT_SHORT_SHA}}-build-${{github.run_id}}-${{github.run_number}}'"
+      #     SLACK_TITLE: ${{ job.status }}
+      #     SLACK_USERNAME: Github Actions
+      #     SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
